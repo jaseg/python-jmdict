@@ -13,8 +13,6 @@ if __name__ == '__main__':
     from types import SimpleNamespace
     from model import *
 
-    groupdict = lambda tupgen: {k: [v for _k,v in vs] for k,vs in itertools.groupby(sorted(tupgen), key=operator.itemgetter(0))}
-
     def _load_jmdict(fname):
         with lzma.open(fname, 'rt', encoding='utf-8') as f:
             tree = ElementTree()

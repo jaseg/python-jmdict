@@ -1,6 +1,104 @@
 
 from collections import namedtuple
 from functools import lru_cache
+from itertools import groupby
+from operator import itemgetter
+
+# small utility function for generating translation dicts
+groupdict = lambda tupgen: {k: [v for _k,v in vs] for k,vs in groupby(sorted(tupgen, key=itemgetter(0)), key=itemgetter(0))}
+
+KATAKANA =
+'アイウエオカガキギクグケゲコゴサザシジスズセゼソゾタダチヂツヅテデトドナニヌネノハバパヒビピフブプヘベペホボポマミムメモヤユヨラリルレロワヰヱヲンヴヷヸヹヺ'
+KATAKANA_MAP = {
+		'~': 'アイウエオ',
+		'k~':  'カキクケコ',
+		's~':  'サシスセソ',
+		't~':  'タチツテト',
+		'n~':  'ナニヌネノ',
+		'h~':  'ハヒフヘホ',
+		'm~':  'マミムメモ',
+		'y~':  'ヤ　ユ　ヨ',
+		'r~':  'ラリルレロ',
+		'w~':  'ワヰ　ヱヲ',
+
+		'g~':  'ガギグゲゴ',
+		'z~':  'ザジズゼゾ',
+		'd~':  'ダヂヅデド',
+		'b~':  'バビブベボ',
+		'p~':  'パピプペポ',
+
+		'~a':  'アカサタナハマヤラワガザダバパ',
+		'~i':  'イキシチニヒミ　リヰギジヂビピ',
+		'~u':  'ウクスツヌフムユル　グズヅブプ',
+		'~e':  'エケセテネヘメ　レヱゲゼデベペ',
+		'~o':  'オコソトノホモヨロヲゴゾドボポ',
+
+		'n':  'ン'}
+
+VOICED_KATAKANA_MAP = {
+	'カ': 'ガ',
+	'キ': 'ギ',
+	'ク': 'グ',
+	'ケ': 'ゲ',
+	'コ': 'ゴ',
+	'サ': 'ザ',
+	'シ': 'ジ',
+	'ス': 'ズ',
+	'セ': 'ゼ',
+	'ソ': 'ゾ',
+	'タ': 'ダ',
+	'チ': 'ヂ',
+	'ツ': 'ヅ',
+	'テ': 'デ',
+	'ト': 'ド',
+	'ハ': 'バ',
+	'ヒ': 'ビ',
+	'フ': 'ブ',
+	'ヘ': 'ベ',
+	'ホ': 'ボ',
+	'ウ': 'ヴ',
+	'ワ': 'ヷ',
+	'ヰ': 'ヸ' ,
+	'ヲ': 'ヺ'}
+
+SMALL_KATAKANA = 'ァィゥェォッャュョヮヵヶㇰㇱㇲㇳㇴㇵㇶㇷㇸㇹㇺㇻㇼㇽㇾㇿ'
+
+SMALL_KATAKANA_MAP = {
+		'ァ': 'ア',
+		'ィ': 'イ',
+		'ゥ': 'ウ',
+		'ェ': 'エ',
+		'ォ': 'オ',
+		'ッ': 'ツ',
+		'ャ': 'ヤ',
+		'ュ': 'ユ',
+		'ョ': 'ヨ',
+		'ヮ': 'ワ',
+		'ヵ': 'カ',
+		'ヶ': 'ケ',
+		'ㇰ': 'ク',
+		'ㇱ': 'シ',
+		'ㇲ': 'ス',
+		'ㇳ': 'ト',
+		'ㇴ': 'ヌ',
+		'ㇵ': 'ハ',
+		'ㇶ': 'ヒ',
+		'ㇷ': 'フ',
+		'ㇸ': 'ヘ',
+		'ㇹ': 'ホ',
+		'ㇺ': 'ム',
+		'ㇻ': 'ラ',
+		'ㇼ': 'リ',
+		'ㇽ': 'ル',
+		'ㇾ': 'レ',
+		'ㇿ': 'ロ'}
+
+ITERATION_MARKS = 'ーヽヾ'
+MORA_REGEX = re.compile('[{.KATAKANA}][{.SMALL_KATAKANA}{.ITERATION_MARKS}]'.format(globals())
+
+# small utility function to split a string into morae
+def morae_split(s):
+
 
 
 class EntryType:
@@ -130,7 +228,22 @@ class EntryType:
     "rkb"     : "Ryuukyuu-ben",
     "vt"      : "transitive verb",
     "vulg"    : "vulgar expression or word",
-    "nokanji" : "Not a true reading of the Kanji"}
+    "nokanji" : "Not a true reading of the Kanji",
+    # begin of jmndict entry types
+    "surname"      : "family or surname",
+    "place"        : "place name",
+    "unclassified" : "unclassified name",
+    "company"      : "company name",
+    "product"      : "product name",
+    "work"         : "work of art, literature, music, etc. name",
+    "malegiven"    : "male given name or forename",
+    "femalegiven"  : "female given name or forename",
+    "person"       : "full name of a particular person",
+    "given"        : "given name or forename, gender not specified",
+    "station"      : "railway station",
+    "organization" : "organization name",
+    "irregular"    : "old or irregular kana form"
+    }
 
     MEDIUM = {
     "abbr"    : "abbr.",
@@ -190,55 +303,87 @@ class EntryType:
     "vs_s"    : "する-verb (special)",
     "vs_i"    : "する-verb (irregular)",
     "vt"      : "transitive",
-    "vulg"    : "vulgar"}
+    "vulg"    : "vulgar",
+	# begin of jmndict entry types
+    "malegiven"    : "male",
+    "femalegiven"  : "female",
+    "person"       : "full"}
 
     SHORT = { v: k for k,v in LONG.items() }
 
 class Entry(namedtuple('EntryBase', ['kanji', 'readings', 'translations', 'links'])):
-	def pretty_print(self, newlines=False, lang='eng'):
-		tlist = lambda ts: ('\n  ' if newlines else '; ').join('{}. {}'.format(i+1, t.pretty_print(lang)) for i,t in enumerate(ts))
-		vlist = lambda vs: ', '.join(str(v) for v in vs)
-		vs = '{} ({})'.format(vlist(self.kanji), vlist(self.readings)) if self.kanji else vlist(self.readings)
-		return '{}:{}{}'.format(vs, '\n  ' if newlines else ' ', tlist(self.translations))
+    def pretty_print(self, newlines=False, lang='eng'):
+        tlist = lambda ts: ('\n  ' if newlines else '; ').join('{}. {}'.format(i+1, t.pretty_print(lang)) for i,t in enumerate(ts))
+        vlist = lambda vs: ', '.join(str(v) for v in vs)
+        vs = '{} ({})'.format(vlist(self.kanji), vlist(self.readings)) if self.kanji else vlist(self.readings)
+        return '{}:{}{}'.format(vs, '\n  ' if newlines else ' ', tlist(self.translations))
 
-	def __str__(self):
-		return self.pretty_print()
+    def __str__(self):
+        return self.pretty_print()
 
 class Variant(namedtuple('VariantBase', ['moji', 'info', 'prio'])):
-	def pretty_print(self):
-		if self.info:
-			return '{0.moji} {0.info}'.format(self)
-		else:
-			return self.moji
+    def pretty_print(self):
+        if self.info:
+            return '{0.moji} {0.info}'.format(self)
+        else:
+            return self.moji
 
-	def __str__(self):
-		return self.pretty_print()
+    def __str__(self):
+        return self.pretty_print()
 
 class Link(namedtuple('LinkBase', ['tag', 'description', 'uri'])):
-	pass
+    pass
 
 class Translation(namedtuple('TranslationBase', ['gloss',
-                                         'gloss_dict',
-                                         'kanji_limited',
-                                         'reading_limited',
-                                         'pos_info',
-                                         'xrefs',
-                                         'antonyms',
-                                         'field_of_use',
-                                         'misc',
-                                         'dialect',
-										 'info'])):
-	@property
-	def usage_info(self):
-		return self.pos_info + self.misc
+        'gloss_dict',
+        'kanji_limited',
+        'reading_limited',
+        'pos_info',
+        'xrefs',
+        'antonyms',
+        'field_of_use',
+        'misc',
+        'dialect',
+        'info'])):
+    @property
+    def usage_info(self):
+        return self.pos_info + self.misc
 
-	def pretty_print(self, lang='eng'):
-		if self.usage_info:
-			return str(self.usage_info)+' '+', '.join(self.gloss_dict[lang])
-		else:
-			return ', '.join(self.gloss_dict[lang])
+    def pretty_print(self, lang='eng'):
+        if self.usage_info:
+            return str(self.usage_info)+' '+', '.join(self.gloss_dict[lang])
+        else:
+            return ', '.join(self.gloss_dict[lang])
 
-	def __str__(self):
-		return self.pretty_print()
+    def __str__(self):
+        return self.pretty_print()
 
 
+class NameTranslation(namedtuple('NameTranslationBase', ['translations', 'types'])):
+    def pretty_print(self, lang='ignored'):
+        if self.types:
+            return str(self.types)+' '+', '.join(self.translations)
+        else:
+            return ', '.join(self.translations)
+
+    def __str__(self):
+        return self.pretty_print()
+
+KanjiVGEntry = namedtuple('KanjiVGEntry', ['strokes', 'groups'])
+
+KanjidicEntry = namedtuple('KanjidicEntry', [
+        'literal',
+        'codepoint',
+        'radicals',
+        'grade',
+        'stroke_count',
+        'variants',
+        'frequency',
+        'rad_names',
+        'jlpt_level',
+        'dic_numbers',
+        'query_codes',
+        'rms',
+        'nanori',
+        'decomposition',
+        'kanjivg'])

@@ -3,75 +3,58 @@
 import lzma
 import pickle
 from enum import Enum
-from collections import namedtuple
+from collections import namedtuple, defaultdict
+from operator import itemgetter
+from model import *
 
-class EntryType(Enum):
-	surname		= 1
-	place  		= 2
-	unclass		= 3
-	company		= 4
-	product		= 5
-	work   		= 6
-	masc   		= 7
-	fem	   		= 8
-	person 		= 9
-	given  		= 10
-	station		= 11
-	organization= 12
-	oik			= 13
+def nametypes(name):
+    d = defaultdict(lambda: 0)
+    for e in mapping[name]:
+        for t in e.translations:
+            for x in t.types:
+                d[x] += 1
+    return list(reversed(sorted(d.items(), key=itemgetter(1))))
 
-	ENTRY_TYPES = {
-			"family or surname":							surname,
-			"place name":									place,
-			"unclassified name":							unclass,
-			"company name":									company,
-			"product name":									product,
-			"work of art, literature, music, etc. name":	work,
-			"male given name or forename":					masc,
-			"female given name or forename":				fem,
-			"full name of a particular person":				person,
-			"given name or forename, gender not specified":	given,
-			"railway station":								station,
-			"organization name":							organization,
-			"old or irregular kana form" :					oik }
-	ENTRY_DESCRIPTIONS = { v:k for k,v in ENTRY_TYPES.items() }
-
-	def __str__(self):
-		return ENTRY_DESCRIPTIONS[self]
-
-Translation	= namedtuple('Translation', ['translations', 'types'])
-Entry		= namedtuple('Entry', ['kanji', 'readings', 'translations'])
+def morae_histogram(indices=slice(None)):
+    d = defaultdict(lambda: defaultdict(lambda: 0))
+    for e in entries:
+        for r in e.readings:
+            keys = morae_split(r)[indices]
+            for key in keys:
+                for t in e.translations:
+                    for x in t.types:
+                        d[x][key] += 1
+                d['total'][key] += 1
+    return {k: list(reversed(sorted(vs.items(), key=itemgetter(1)))) for k,vs in d.items()}
 
 if __name__ == '__main__':
-	from xml.etree.ElementTree import ElementTree
-	from types import SimpleNamespace
-	import names
+    from xml.etree.ElementTree import ElementTree
+    from types import SimpleNamespace
 
-	def _load_jmnedict(fname):
-		with lzma.open(fname, 'rt', encoding='utf-8') as f:
-			tree = ElementTree()
-			tree.parse(f)
-	
-		data = set()
-		def parse_entry(entry):
-			kanji = frozenset({ keb.text for ele in entry.findall('k_ele') for keb in ele.findall('keb') })
-			readings = frozenset({ reb.text for ele in entry.findall('r_ele') for reb in ele.findall('reb') })
-			trans = entry.findall('trans')
-			# strip leading & and trailing ; from entity (e.g. "&person;"→"person")
-			translations = frozenset({
-					names.Translation(tuple( det.text for det in tr.findall('trans_det') ),
-								tuple( ENTRY_TYPES[nt.text] for nt in tr.findall('name_type') ))
-					for tr in trans })
-			return names.Entry(kanji, readings, translations)
-		entries = { parse_entry(entry) for entry in tree.getroot().findall('entry') }
-		mapping = { key: entry for entry in entries for key in entry.kanji|entry.readings }
-		return entries,mapping
-	
-	entries,mapping = _load_jmnedict('JMnedict.xml.lzma')
-	
-	with lzma.open('name_data.pickle.lzma', 'wb') as f:
-		pickle.dump((entries,mapping), f)
+    def _load_jmnedict(fname):
+        with lzma.open(fname, 'rt', encoding='utf-8') as f:
+            tree = ElementTree()
+            tree.parse(f)
+    
+        data = set()
+        def parse_entry(entry):
+            kanji = [ keb.text for ele in entry.findall('k_ele') for keb in ele.findall('keb') ]
+            readings = [ reb.text for ele in entry.findall('r_ele') for reb in ele.findall('reb') ]
+            trans = entry.findall('trans')
+            # strip leading & and trailing ; from entity (e.g. "&person;"→"person")
+            translations = [ NameTranslation([ det.text for det in tr.findall('trans_det') ],
+                            [ EntryType(nt.text) for nt in tr.findall('name_type') ])
+                    for tr in trans ]
+            return Entry(kanji, readings, translations, None)
+        entries = [ parse_entry(entry) for entry in tree.getroot().findall('entry') ]
+        mapping = groupdict((key, entry) for entry in entries for key in entry.kanji+entry.readings)
+        return entries,mapping
+    
+    entries,mapping = _load_jmnedict('JMnedict.xml.lzma')
+    
+    with lzma.open('name_data.pickle.lzma', 'wb') as f:
+        pickle.dump((entries,mapping), f)
 else:
-	with lzma.open('name_data.pickle.lzma', 'rb') as f:
-		entries,mapping = pickle.load(f)
+    with lzma.open('name_data.pickle.lzma', 'rb') as f:
+        entries,mapping = pickle.load(f)
 
