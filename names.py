@@ -19,7 +19,7 @@ def morae_histogram(indices=slice(None)):
     d = defaultdict(lambda: defaultdict(lambda: 0))
     for e in entries:
         for r in e.readings:
-            keys = morae_split(r)[indices]
+            keys = r[indices]
             for key in keys:
                 for t in e.translations:
                     for x in t.types:
